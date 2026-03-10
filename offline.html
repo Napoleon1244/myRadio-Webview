@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#141210">
+  <title>myRadio Web — Offline</title>
+  <style>
+    :root{--paper:#141210;--ink:#e8e4de;--violet:#b39ddb;--dim:#7a7268;
+      --font-serif:"Georgia",serif;--font-sans:system-ui,sans-serif}
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{width:100%;height:100%;overflow:hidden;
+      background:var(--paper);color:var(--ink);font-family:var(--font-sans)}
+    body{display:flex;flex-direction:column;align-items:center;justify-content:center;
+      gap:10px;padding:32px;text-align:center}
+    .icon{font-size:2.8rem;animation:pulse 2s ease infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+    h1{font-family:var(--font-serif);font-size:1.3rem;font-weight:400;letter-spacing:-.02em}
+    p{font-size:.65rem;color:var(--dim);line-height:1.7;max-width:220px}
+    .dot{width:8px;height:8px;border-radius:50%;background:#e05c5c;margin-top:6px;
+      animation:pulse 2s ease infinite}
+    button{margin-top:8px;padding:10px 22px;border-radius:11px;background:var(--violet);
+      color:var(--paper);border:none;cursor:pointer;font-size:.7rem;font-weight:500}
+  </style>
+</head>
+<body>
+  <span class="icon">📡</span>
+  <h1 id="t">Tidak Ada Koneksi</h1>
+  <p id="s">myRadio Web butuh internet. Sambungkan ke WiFi atau data seluler, lalu coba lagi.</p>
+  <div class="dot"></div>
+  <button onclick="location.reload()">Coba Lagi</button>
+  <script>
+    const id = (navigator.language||'en').toLowerCase().startsWith('id') ? 'id' : 'en';
+    if (id === 'en') {
+      document.getElementById('t').textContent = 'No Connection';
+      document.getElementById('s').textContent = 'myRadio Web needs internet. Connect to WiFi or mobile data and try again.';
+      document.querySelector('button').textContent = 'Try Again';
+    }
+  </script>
+</body>
+</html>

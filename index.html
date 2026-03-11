@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#141210">
+  <meta name="apple-mobile-web-app-title" content="myRadio Web">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="dns-prefetch" href="https://r-a-d.io">
+  <link rel="dns-prefetch" href="https://listen.moe">
+  <title>myRadio Web</title>
+  <style>
+    :root {
+      --ink:#e8e4de; --paper:#141210; --mist:#1c1914; --smoke:#2e2a26; --dim:#7a7268;
+      --violet:#b39ddb; --violet-mid:#c8b0f0; --violet-pale:#2a2040;
+      /* System serif stack — zero network, renders instantly */
+      --font-serif:"Palatino Linotype","Book Antiqua",Palatino,"Georgia",serif;
+      --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      --t:.22s ease; --tab-h:58px; --header-h:52px;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    *{-webkit-tap-highlight-color:transparent}
+    html,body{width:100%;height:100%;overflow:hidden;overscroll-behavior:none;
+      background:var(--paper);color:var(--ink);font-family:var(--font-sans);font-weight:400}
+
+    /* Grain */
+    body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.02;
+      background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      background-size:128px}
+
+    .shell{position:relative;z-index:1;width:100%;height:100%;display:flex;flex-direction:column}
+
+    /* Header */
+    .header{height:var(--header-h);flex-shrink:0;display:flex;align-items:center;
+      justify-content:space-between;padding:0 16px;
+      padding-top:env(safe-area-inset-top);
+      background:var(--paper);border-bottom:1px solid var(--smoke)}
+    .header-brand{display:flex;flex-direction:column;gap:1px}
+    .brand-label{font-size:.45rem;font-weight:600;letter-spacing:.22em;
+      text-transform:uppercase;color:var(--violet);line-height:1}
+    .brand-title{font-family:var(--font-serif);font-size:1.1rem;font-weight:400;
+      letter-spacing:-.01em;color:var(--ink);line-height:1.1}
+    .header-right{display:flex;align-items:center;gap:8px}
+    .data-usage{font-size:.45rem;color:var(--violet);letter-spacing:.04em;opacity:.75}
+    .icon-btn{width:32px;height:32px;border-radius:50%;background:var(--mist);
+      border:1px solid var(--smoke);cursor:pointer;display:flex;align-items:center;
+      justify-content:center;font-size:.85rem;color:var(--dim);
+      transition:transform .15s;flex-shrink:0;position:relative}
+    .icon-btn:active{transform:scale(.88)}
+    .icon-btn.timer-active{border-color:var(--violet);color:var(--violet)}
+    .badge{position:absolute;top:2px;right:2px;width:6px;height:6px;border-radius:50%;
+      background:var(--violet);display:none}
+    .badge.visible{display:block}
+
+    /* Content */
+    .content{flex:1;position:relative;overflow:hidden;min-height:0}
+    .panel{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .2s}
+    .panel.active{opacity:1;pointer-events:all}
+    .panel iframe{width:100%;height:100%;border:none;display:block;background:var(--paper)}
+
+    /* Loading */
+    .loading{position:absolute;inset:0;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;gap:10px;pointer-events:none}
+    .loading.hide{display:none}
+    .spinner{width:26px;height:26px;border-radius:50%;border:2px solid var(--smoke);
+      border-top-color:var(--violet);animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .loading-text{font-size:.55rem;color:var(--dim);letter-spacing:.1em}
+
+    /* Fallback */
+    .fallback{display:none;flex-direction:column;align-items:center;justify-content:center;
+      height:100%;gap:14px;padding:32px;text-align:center}
+    .fallback.show{display:flex}
+    .fallback-icon{font-size:2.2rem}
+    .fallback-title{font-family:var(--font-serif);font-size:1.15rem;font-weight:400}
+    .fallback-sub{font-size:.6rem;color:var(--dim);line-height:1.7;max-width:250px}
+    .open-btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;
+      border-radius:12px;background:var(--violet);color:var(--paper);border:none;
+      cursor:pointer;font-size:.7rem;font-weight:500;text-decoration:none;
+      transition:opacity .2s,transform .15s}
+    .open-btn:active{transform:scale(.96);opacity:.85}
+
+    /* Tabbar */
+    .tabbar{height:var(--tab-h);flex-shrink:0;display:flex;background:var(--paper);
+      border-top:1px solid var(--smoke);padding-bottom:env(safe-area-inset-bottom)}
+    .tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+      gap:3px;cursor:pointer;border:none;background:none;position:relative;
+      transition:background .15s;padding:0}
+    .tab:active{background:var(--mist)}
+    .tab-icon{font-size:1.1rem;line-height:1;transition:transform .2s}
+    .tab.active .tab-icon{transform:scale(1.12)}
+    .tab-label{font-size:.45rem;font-weight:600;letter-spacing:.08em;
+      text-transform:uppercase;color:var(--dim)}
+    .tab.active .tab-label{color:var(--violet)}
+    .tab-ind{position:absolute;top:0;left:50%;transform:translateX(-50%);
+      width:0;height:2px;border-radius:0 0 2px 2px;background:var(--violet);
+      transition:width .25s ease}
+    .tab.active .tab-ind{width:28px}
+
+    /* Sleep Timer */
+    .tw-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:8000}
+    .tw-overlay.open{display:block}
+    .tw-widget{position:fixed;top:54px;right:14px;z-index:8001;width:205px;
+      border-radius:15px;background:var(--mist);border:1px solid var(--smoke);
+      padding:15px;box-shadow:0 8px 28px rgba(0,0,0,.55);
+      display:none;flex-direction:column;gap:11px}
+    .tw-widget.open{display:flex}
+    .tw-head{display:flex;align-items:center;justify-content:space-between}
+    .tw-title{font-family:var(--font-serif);font-size:.82rem;font-weight:400}
+    .tw-close{background:none;border:none;color:var(--dim);font-size:.85rem;
+      cursor:pointer;padding:2px 5px}
+    .tw-row{display:flex;align-items:center;gap:8px}
+    .tw-label{font-size:.55rem;color:var(--dim);flex-shrink:0}
+    .tw-input{width:52px;flex-shrink:0;background:var(--smoke);border:1px solid var(--smoke);
+      border-radius:8px;padding:5px 6px;font-family:var(--font-sans);font-size:.78rem;
+      font-weight:500;color:var(--ink);outline:none;text-align:center;
+      transition:border-color var(--t)}
+    .tw-input::-webkit-outer-spin-button,.tw-input::-webkit-inner-spin-button{-webkit-appearance:none}
+    .tw-input:focus{border-color:var(--violet)}
+    .tw-unit{font-size:.55rem;color:var(--dim);flex-shrink:0}
+    .tw-cd{font-family:var(--font-serif);font-size:1.9rem;font-weight:400;text-align:center;
+      letter-spacing:-.02em;color:var(--dim);transition:color var(--t);line-height:1}
+    .tw-cd.running{color:var(--violet-mid)}
+    .tw-btn{width:100%;padding:9px;border-radius:10px;background:var(--violet-pale);
+      color:var(--violet-mid);border:1px solid var(--violet-pale);
+      font-family:var(--font-sans);font-size:.68rem;font-weight:500;cursor:pointer;
+      transition:background var(--t),color var(--t),box-shadow var(--t)}
+    .tw-btn.on{background:var(--violet);color:var(--paper);
+      box-shadow:0 2px 10px rgba(179,157,219,.3)}
+    .tw-info{font-size:.55rem;color:var(--dim);line-height:1.6;text-align:center}
+    .tw-info em{color:var(--violet);font-style:normal}
+
+    /* Install banner */
+    #installBanner{display:none;position:fixed;bottom:calc(var(--tab-h) + 8px);
+      left:12px;right:12px;z-index:7000;background:var(--mist);
+      border:1px solid var(--violet-pale);border-radius:13px;padding:11px 13px;
+      align-items:center;gap:10px;box-shadow:0 4px 18px rgba(0,0,0,.4)}
+    #installBanner.show{display:flex}
+    .ib-text{flex:1;font-size:.58rem;color:var(--ink);line-height:1.4}
+    .ib-title{font-family:var(--font-serif);font-size:.78rem;display:block;margin-bottom:1px}
+    .ib-sub{font-size:.55rem;color:var(--dim)}
+    .ib-btn{padding:7px 13px;border-radius:9px;background:var(--violet);color:var(--paper);
+      border:none;cursor:pointer;font-size:.6rem;font-weight:600;white-space:nowrap;flex-shrink:0}
+    .ib-x{background:none;border:none;color:var(--dim);font-size:.8rem;cursor:pointer;padding:2px 4px}
+
+
+    /* Welcome screen */
+    #welcome{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;gap:24px;padding:32px;
+      background:var(--paper);transition:opacity .3s ease,visibility .3s ease}
+    #welcome.hide{opacity:0;visibility:hidden;pointer-events:none}
+    .wc-title{font-family:var(--font-serif);font-size:1.5rem;font-weight:400;
+      letter-spacing:-.02em;color:var(--ink);text-align:center;line-height:1.2}
+    .wc-sub{font-size:.58rem;color:var(--dim);letter-spacing:.12em;
+      text-transform:uppercase;text-align:center}
+    .wc-cards{display:flex;flex-direction:column;gap:10px;width:100%;max-width:260px}
+    .wc-card{display:flex;align-items:center;gap:14px;padding:14px 16px;
+      border-radius:14px;background:var(--mist);border:1px solid var(--smoke);
+      cursor:pointer;transition:border-color .2s,transform .15s;text-align:left}
+    .wc-card:active{transform:scale(.97)}
+    .wc-card:hover{border-color:var(--violet)}
+    .wc-card-icon{font-size:1.6rem;flex-shrink:0}
+    .wc-card-info{display:flex;flex-direction:column;gap:2px}
+    .wc-card-name{font-family:var(--font-serif);font-size:.95rem;font-weight:400;color:var(--ink)}
+    .wc-card-desc{font-size:.52rem;color:var(--dim);letter-spacing:.02em}
+
+
+    
+    @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+    /* Splash */
+    #splash{position:fixed;inset:0;z-index:9999;background:var(--paper);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;
+      transition:opacity .35s ease,visibility .35s ease}
+    #splash.hide{opacity:0;visibility:hidden;pointer-events:none}
+    .sp-title{font-family:var(--font-serif);font-size:1.55rem;font-weight:400;
+      letter-spacing:-.02em;color:var(--ink)}
+    .sp-sub{font-size:.48rem;color:var(--violet);letter-spacing:.2em;text-transform:uppercase}
+
+    /* Offline */
+    #offlineScreen{display:none;position:fixed;inset:0;z-index:9990;background:var(--paper);
+      flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:32px}
+    #offlineScreen.show{display:flex}
+    .off-icon{font-size:2.5rem}
+    .off-title{font-family:var(--font-serif);font-size:1.25rem;font-weight:400}
+    .off-sub{font-size:.6rem;color:var(--dim);text-align:center;line-height:1.6;max-width:230px}
+    .off-dot{width:8px;height:8px;border-radius:50%;background:#e05c5c;margin-top:4px;
+      animation:pulse 2s ease infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  </style>
+</head>
+<body>
+
+<div id="splash">
+  <div class="sp-title">myRadio</div>
+  <div class="sp-sub">Webview</div>
+</div>
+
+<div id="offlineScreen">
+  <span class="off-icon">📡</span>
+  <div class="off-title" id="offTitle"></div>
+  <p class="off-sub" id="offSub"></p>
+  <div class="off-dot"></div>
+</div>
+
+<div class="tw-overlay" id="twOverlay" onclick="closeTimer()"></div>
+<div class="tw-widget" id="twWidget">
+  <div class="tw-head">
+    <span class="tw-title" id="twTitle"></span>
+    <button class="tw-close" onclick="closeTimer()">✕</button>
+  </div>
+  <div class="tw-row">
+    <span class="tw-label" id="twDurLbl"></span>
+    <input class="tw-input" id="twInput" type="text" inputmode="numeric"
+      maxlength="4" value="15"
+      oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,4);onDurInput()">
+    <span class="tw-unit" id="twUnit"></span>
+  </div>
+  <div class="tw-cd" id="twCd">15:00</div>
+  <button class="tw-btn" id="twBtn" onclick="toggleTimer()"></button>
+  <p class="tw-info" id="twInfo"></p>
+</div>
+
+<div id="installBanner">
+  <div class="ib-text">
+    <span class="ib-title" id="ibTitle"></span>
+    <span class="ib-sub" id="ibSub"></span>
+  </div>
+  <button class="ib-btn" id="ibBtn" onclick="installPWA()"></button>
+  <button class="ib-x" onclick="dismissInstall()">✕</button>
+</div>
+
+
+<div class="shell">
+  <header class="header">
+    <div class="header-brand">
+      <span class="brand-label">myRadio</span>
+      <span class="brand-title" id="headerTitle">r/a/dio</span>
+    </div>
+    <div class="header-right">
+      <span class="data-usage" id="dataUsage">0 KB</span>
+      <button class="icon-btn" id="timerBtn" onclick="openTimer()">
+        ⏱<span class="badge" id="timerBadge"></span>
+      </button>
+      <button class="icon-btn" id="reloadBtn" style="color:var(--violet)">⟳</button>
+    </div>
+  </header>
+
+  <main class="content">
+    <div class="panel" id="panel-rad">
+      <div class="loading" id="loading-rad">
+        <div class="spinner"></div>
+        <span class="loading-text" id="lt-rad">···</span>
+      </div>
+      <div class="fallback" id="fallback-rad">
+        <span class="fallback-icon">📻</span>
+        <div class="fallback-title">r/a/dio</div>
+        <p class="fallback-sub" id="fsub-rad"></p>
+        <a href="https://r-a-d.io" target="_blank" rel="noopener" class="open-btn" id="fbtn-rad"></a>
+      </div>
+      <iframe id="iframe-rad" title="r/a/dio"></iframe>
+    </div>
+    <div class="panel" id="panel-lmoe">
+      <div class="loading" id="loading-lmoe">
+        <div class="spinner"></div>
+        <span class="loading-text" id="lt-lmoe">···</span>
+      </div>
+      <div class="fallback" id="fallback-lmoe">
+        <span class="fallback-icon">🎵</span>
+        <div class="fallback-title">listen.moe</div>
+        <p class="fallback-sub" id="fsub-lmoe"></p>
+        <a href="https://listen.moe" target="_blank" rel="noopener" class="open-btn" id="fbtn-lmoe"></a>
+      </div>
+      <iframe id="iframe-lmoe" title="listen.moe"></iframe>
+    </div>
+
+    <!-- Welcome screen -->
+    <div id="welcome">
+      <div style="text-align:center">
+        <div class="wc-title" id="wcTitle">Pilih Stasiun</div>
+        <div class="wc-sub" id="wcSub">myRadio Webview</div>
+      </div>
+      <div class="wc-cards">
+        <div class="wc-card" onclick="startStation('rad')">
+          <span class="wc-card-icon">📻</span>
+          <div class="wc-card-info">
+            <span class="wc-card-name">r/a/dio</span>
+            <span class="wc-card-desc" id="wc-rad-desc">Anime &amp; Doujin Music</span>
+          </div>
+        </div>
+        <div class="wc-card" onclick="startStation('lmoe')">
+          <span class="wc-card-icon">🎵</span>
+          <div class="wc-card-info">
+            <span class="wc-card-name">listen.moe</span>
+            <span class="wc-card-desc" id="wc-lmoe-desc">Japanese &amp; Korean Pop</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <nav class="tabbar">
+    <button class="tab" id="tab-rad" onclick="switchTab('rad')">
+      <div class="tab-ind"></div>
+      <span class="tab-icon">📻</span>
+      <span class="tab-label">R/A/DIO</span>
+    </button>
+    <button class="tab" id="tab-lmoe" onclick="switchTab('lmoe')">
+      <div class="tab-ind"></div>
+      <span class="tab-icon">🎵</span>
+      <span class="tab-label">LISTEN.MOE</span>
+    </button>
+  </nav>
+</div>
+
+<script>
+  // ── Splash: hide immediately on DOMContentLoaded, no waiting ──
+  const splash = document.getElementById('splash');
+  splash.classList.add('hide'); // instant hide — no delay at all
+
+  // ── i18n ──
+  const LANG = (navigator.language||'en').toLowerCase().startsWith('id') ? 'id' : 'en';
+  const T = {
+    id:{
+      offline_title:'Tidak Ada Koneksi',
+      offline_sub:'myRadio Web butuh internet. Sambungkan ke WiFi atau data seluler, lalu coba lagi.',
+      fallback_sub:'Situs ini tidak bisa ditampilkan. Buka di browser untuk pengalaman penuh.',
+      open_rad:'Buka r/a/dio ↗', open_lmoe:'Buka listen.moe ↗', loading:'MEMUAT',
+      timer_title:'Timer Tidur', timer_dur:'Durasi', timer_unit:'menit',
+      timer_start:'Mulai Timer', timer_cancel:'Batalkan Timer',
+      timer_info:'Saat habis, <em>kedua situs ditutup</em> dan audio berhenti.',
+      install_title:'Install myRadio Web', install_sub:'Tambah ke home screen!', install_btn:'Install',
+      
+      wc_title:'Pilih Stasiun', wc_sub:'myRadio Webview',
+      wc_rad_desc:'Anime & Doujin Music', wc_lmoe_desc:'Japanese & Korean Pop',
+    },
+    en:{
+      offline_title:'No Connection',
+      offline_sub:'myRadio Web needs internet. Connect to WiFi or mobile data and try again.',
+      fallback_sub:'This site cannot be embedded. Open in browser for the full experience.',
+      open_rad:'Open r/a/dio ↗', open_lmoe:'Open listen.moe ↗', loading:'LOADING',
+      timer_title:'Sleep Timer', timer_dur:'Duration', timer_unit:'min',
+      timer_start:'Start Timer', timer_cancel:'Cancel Timer',
+      timer_info:'When timer ends, <em>both sites close</em> and audio stops.',
+      install_title:'Install myRadio Web', install_sub:'Add to home screen!', install_btn:'Install',
+      
+      wc_title:'Choose Station', wc_sub:'myRadio Webview',
+      wc_rad_desc:'Anime & Doujin Music', wc_lmoe_desc:'Japanese & Korean Pop',
+    }
+  }[LANG];
+
+  const $ = id => document.getElementById(id);
+  document.querySelector('html').lang = LANG;
+
+  // Apply i18n
+  $('offTitle').textContent   = T.offline_title;
+  $('offSub').textContent     = T.offline_sub;
+  $('fsub-rad').textContent   = T.fallback_sub;
+  $('fsub-lmoe').textContent  = T.fallback_sub;
+  $('fbtn-rad').textContent   = T.open_rad;
+  $('fbtn-lmoe').textContent  = T.open_lmoe;
+  $('lt-rad').textContent     = T.loading;
+  $('lt-lmoe').textContent    = T.loading;
+  $('twTitle').textContent    = T.timer_title;
+  $('twDurLbl').textContent   = T.timer_dur;
+  $('twUnit').textContent     = T.timer_unit;
+  $('twBtn').textContent      = T.timer_start;
+  $('twInfo').innerHTML       = T.timer_info;
+  $('ibTitle').textContent    = T.install_title;
+  $('ibSub').textContent      = T.install_sub;
+  $('ibBtn').textContent      = T.install_btn;
+  
+  $('wcTitle').textContent    = T.wc_title;
+  $('wcSub').textContent      = T.wc_sub;
+  $('wc-rad-desc').textContent  = T.wc_rad_desc;
+  $('wc-lmoe-desc').textContent = T.wc_lmoe_desc;
+
+  // ── Stations ──
+  const STATIONS = {
+    rad:  { url:'https://r-a-d.io',   label:'r/a/dio'    },
+    lmoe: { url:'https://listen.moe', label:'listen.moe' },
+  };
+  let activeTab = null; // null = welcome screen showing
+  const loaded  = { rad:false, lmoe:false };
+
+  function loadIframe(id) {
+    if (loaded[id]) return;
+    loaded[id] = true;
+    const iframe  = $('iframe-'  + id);
+    const loading = $('loading-' + id);
+    iframe.src = STATIONS[id].url;
+    iframe.addEventListener('load', function() {
+      loading.classList.add('hide');
+      try {
+        const doc = iframe.contentDocument || iframe.contentWindow.document;
+        if (!doc || !doc.body || doc.body.innerHTML.trim() === '') showFallback(id);
+      } catch(e) { /* cross-origin = OK */ }
+    }, { once: true });
+    setTimeout(() => { if (!loading.classList.contains('hide')) showFallback(id); }, 12000);
+  }
+
+  function showFallback(id) {
+    $('loading-'  + id).classList.add('hide');
+    $('iframe-'   + id).style.display = 'none';
+    $('fallback-' + id).classList.add('show');
+  }
+
+  function switchTab(id) {
+    if (activeTab === id) return;
+    const prev = activeTab;
+    activeTab = id;
+    Object.keys(STATIONS).forEach(s => {
+      $('panel-' + s).classList.toggle('active', s === id);
+      $('tab-'   + s).classList.toggle('active', s === id);
+    });
+    $('headerTitle').textContent = STATIONS[id].label;
+    loadIframe(id);
+  }
+
+  $('reloadBtn').addEventListener('click', function() {
+    const id = activeTab;
+    $('fallback-' + id).classList.remove('show');
+    $('iframe-'   + id).style.display = '';
+    $('loading-'  + id).classList.remove('hide');
+    $('iframe-'   + id).src = STATIONS[id].url;
+    loaded[id] = false;
+    loadIframe(id);
+  });
+
+  // ── Welcome → Station ──
+  let sessionStarted = false;
+
+  function startStation(id) {
+    $('welcome').classList.add('hide');
+    sessionStarted = true;
+    // Set active tab visually then load
+    activeTab = id;
+    Object.keys(STATIONS).forEach(s => {
+      $('panel-' + s).classList.toggle('active', s === id);
+      $('tab-'   + s).classList.toggle('active', s === id);
+    });
+    $('headerTitle').textContent = STATIONS[id].label;
+    loadIframe(id);
+  }
+
+  // ── Sleep Timer ──
+  const twCd  = $('twCd');
+  const twBtn = $('twBtn');
+  const twInput = $('twInput');
+  let sleepEnd = 0, sleepTickID = null, timerFired = false;
+
+  function fmtTime(ms) {
+    const t = Math.max(0, Math.ceil(ms/1000));
+    return Math.floor(t/60) + ':' + String(t%60).padStart(2,'0');
+  }
+  function onDurInput() {
+    if (sleepTickID) return;
+    twCd.textContent = (parseInt(twInput.value)||0) + ':00';
+  }
+  function openTimer()  { $('twWidget').classList.add('open'); $('twOverlay').classList.add('open'); }
+  function closeTimer() { $('twWidget').classList.remove('open'); $('twOverlay').classList.remove('open'); }
+  function toggleTimer() { sleepTickID ? cancelTimer() : startTimer(); }
+
+  function startTimer() {
+    const mins = Math.max(1, parseInt(twInput.value)||15);
+    twInput.value = mins;
+    sleepEnd = Date.now() + mins * 60000;
+    timerFired = false;
+    twInput.disabled = true;
+    twCd.classList.add('running');
+    twBtn.textContent = T.timer_cancel;
+    twBtn.classList.add('on');
+    $('timerBadge').classList.add('visible');
+    $('timerBtn').classList.add('timer-active');
+    sleepTickID = setInterval(tick, 500);
+    tick();
+  }
+
+  function cancelTimer() {
+    clearInterval(sleepTickID); sleepTickID = null;
+    twInput.disabled = false;
+    twCd.classList.remove('running');
+    twCd.textContent = (parseInt(twInput.value)||15) + ':00';
+    twBtn.textContent = T.timer_start;
+    twBtn.classList.remove('on');
+    $('timerBadge').classList.remove('visible');
+    $('timerBtn').classList.remove('timer-active');
+    $('twInfo').innerHTML = T.timer_info;
+  }
+
+  function tick() {
+    const rem = sleepEnd - Date.now();
+    twCd.textContent = fmtTime(rem);
+    if (rem <= 0 && !timerFired) fireTimer();
+  }
+
+  function fireTimer() {
+    timerFired = true;
+    clearInterval(sleepTickID); sleepTickID = null;
+    $('timerBadge').classList.remove('visible');
+    $('timerBtn').classList.remove('timer-active');
+    Object.keys(STATIONS).forEach(id => {
+      $('iframe-'   + id).src = ''; loaded[id] = false;
+      $('loading-'  + id).classList.add('hide');
+      $('fallback-' + id).classList.add('show');
+    });
+    twCd.textContent = '0:00';
+    twBtn.textContent = T.timer_start;
+    twBtn.classList.remove('on');
+    twInput.disabled = false;
+    // Try window.close() first; if browser blocks it, replace page with
+    // about:blank so there's no stuck blank/white screen
+    try { window.close(); } catch(e) {}
+    setTimeout(function() {
+      try { location.replace('about:blank'); } catch(e) {}
+    }, 400);
+  }
+
+  // ── Data tracker ──
+  let totalBytes = 0;
+  const dataEl = $('dataUsage');
+  function fmtBytes(b) {
+    if (b < 1048576)    return (b/1024).toFixed(1) + ' KB';
+    if (b < 1073741824) return (b/1048576).toFixed(2) + ' MB';
+    return (b/1073741824).toFixed(2) + ' GB';
+  }
+  setInterval(function() {
+    const any = Object.keys(STATIONS).some(id => {
+      const s = $('iframe-' + id).src;
+      return s && !s.endsWith('blank') && s !== location.href;
+    });
+    if (any && sessionStarted) { totalBytes += (128*1000/8)*0.1; dataEl.textContent = fmtBytes(totalBytes); }
+  }, 100);
+
+  // ── PWA Install ──
+  let deferredPrompt = null;
+  const installBanner = $('installBanner');
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault(); deferredPrompt = e;
+    if (!localStorage.getItem('mrw-nodim')) setTimeout(() => installBanner.classList.add('show'), 2500);
+  });
+  window.addEventListener('appinstalled', () => {
+    installBanner.classList.remove('show');
+    localStorage.setItem('mrw-nodim','1');
+  });
+  function installPWA() {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(() => { deferredPrompt=null; installBanner.classList.remove('show'); });
+  }
+  function dismissInstall() {
+    installBanner.classList.remove('show');
+    localStorage.setItem('mrw-nodim','1');
+  }
+
+  // ── Offline ──
+  const offlineScreen = $('offlineScreen');
+  function checkOnline() { offlineScreen.classList.toggle('show', !navigator.onLine); }
+  checkOnline();
+  window.addEventListener('offline', checkOnline);
+  window.addEventListener('online',  checkOnline);
+
+  // ── SW ──
+  if ('serviceWorker' in navigator)
+    window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+
+  // ── Init ── (welcome screen shown, no iframe preloaded)
+</script>
+</body>
+</html>
